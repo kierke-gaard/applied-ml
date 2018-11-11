@@ -37,10 +37,10 @@ print("Author frequency", data[['id', 'author']].groupby('author').agg('count'))
 
 import nltk
 from nltk.stem import WordNetLemmatizer
-from functools import partial
+from functools import partial, reduce
 
 def compose(*functions):
-    return functools.reduce(lambda f, g: lambda x: f(g(x)),
+    return reduce(lambda f, g: lambda x: f(g(x)),
                             functions,
                             lambda x: x)
 
@@ -55,7 +55,6 @@ cleaner = compose(list,
                   partial(filter, filter_fn(punctuation)),
                   partial(map, lemm.lemmatize),
                   nltk.word_tokenize)
-                          
 
 data['cleaned'] = data.text.apply(cleaner)
 
@@ -69,8 +68,7 @@ from sklearn.feature_extraction.text import TfidfTransformer
 import numpy as np
 
 counts = CountVectorizer(stop_words='english').fit_transform(data.text)
-tfidf_trafo = TfidfTransformer(norm='l1')
-tfidf = tfidf_trafo.fit_transform(counts)
+X = TfidfTransformer(norm='l1').fit_transform(counts)
 
 
 # ========================================
@@ -78,18 +76,15 @@ tfidf = tfidf_trafo.fit_transform(counts)
 # ========================================
 
 from sklearn.naive_bayes import MultinomialNB
-nb = MultinomialNB().fit(tfidf, data.author)
+nb = MultinomialNB().fit(X, data.author)
 
-nb.predict_proba(X[0])
-nb.predict(X[0])
-data.author[0]
 
 # ========================================
 # Evaluation
 # ========================================
 
-error = lambda x, y: sum(x == y) / len(x)
+precision = lambda x, y: sum(x == y) / len(x)
 
-print("In sample error",
-      error(data.author, nb.predict(X)))
+print("In sample precision",
+      precision(data.author, nb.predict(X)))
 
